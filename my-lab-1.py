@@ -1,3 +1,4 @@
+from telnetlib import telnet
 cmd=input('Please enter your command:')
 connect=Telnet('192.168.1.19')
 connect.write(b'admin\n')
