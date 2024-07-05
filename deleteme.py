@@ -438,7 +438,7 @@ finally:
 from netmiko import ConnectHandler
 from getpass import getpass
 from netmiko import NetmikoAuthenticationException,NetMikoTimeoutException
-x= 2
+
 R1 = {
     'device_type': 'cisco_ios',
     'IP': '10.10.10.10',
@@ -509,10 +509,193 @@ with open ('device.txt') as routers:
           finally:
             R_ssh.send_command('end')
             R_ssh.disconnect
+#=======================================
+#LAB-11: LAB Challenge#1
+#=======================================
+from netmiko import ConnectHandler
+from getpass import getpass
+from netmiko import NetmikoAuthenticationException,NetMikoTimeoutException
+import os
+
+R1 = {
+    'device_type': 'cisco_ios',
+    'IP': '10.10.10.10',
+    'username': 'admin',
+    'password': 'admin',
+    'secret': 'admin',
+    'timeout': 30
+    }
+R2 = {
+    'device_type': 'cisco_ios',
+    'IP': '20.20.20.20',
+    'username': 'admin',
+    'password': 'admin',
+    'secret': 'admin',
+    'timeout': 30
+}
+try:
+    print("Connecting to R1 --inprogress")
+    R1_ssh = ConnectHandler(**R1)
+    R1_ssh.is_alive()
+    R1_ssh.find_prompt()
+    R1_ssh.enable()
+    print("Getting hostname of R1 --inprogress")
+    ssh_host = R1_ssh.send_command('show run | inc hostname')
+    X = ssh_host.split()
+    hostname = X[1]
+    backupfile = hostname + '-Backup.txt'
+    print('Backing up R1 --inprogress')
+    R1_ssh.send_command('terminal length 0')
+    getconfig = R1_ssh.send_command('show run')
+    backup = open (backupfile, "w")
+    backup.write(getconfig)
+    backup.close()
+    print(f'{hostname} backed up successfully')
+    print(output)
+
+    print("Connecting to R1 --inprogress")
+    R2_ssh = ConnectHandler(**R2)
+    R2_ssh.is_alive()
+    R2_ssh.find_prompt()
+    R2_ssh.enable()
+    print("Getting hostname of R1 --inprogress")
+    R2_ssh.send_command('terminal length 0')
+    ssh_host = R2_ssh.send_command('show run | inc hostname')
+    X = ssh_host.split()
+    hostname = X[1]
+    backupfile = hostname + '-Backup.cfg'
+    print('Backing up R1 --inprogress')
+    getconfig = R2_ssh.send_command('show run')
+    backup = open (backupfile, "w")
+    backup.write(getconfig)
+    backup.close()
+    print(f'{hostname} backed up successfully')
+    print(output)
+    # with open('R1-Backup.cfg','w') as FILE:
+    #      FILE.write(getconfig)
+    # With statement will automatically close the file no need to close it manually.
+    
+#Error Handling Exceptions     
+except NetMikoAuthenticationException:
+    print(f"Auth failed to {IP}. Please double check username and password")
+except NetMikoTimeoutException:
+    print(f"failed to connect {IP}. Please check connection")
+except Exception:
+    print(f"An error occcured dute to unknown reason to {IP}") 
+#Exit configuration mode and Disconnect SSH      
+finally:
+    R1_ssh.send_command('end')
+    R1_ssh.send_command('end')
+    R1_ssh.disconnect
+    R2_ssh.disconnect
+
+#========================================
+#LAB-12: LAB Challenge#1 for many devices
+#========================================
+from netmiko import ConnectHandler
+from netmiko import NetmikoAuthenticationException,NetMikoTimeoutException
+from getpass import getpass
+import os
+
+PASS = getpass('Please add password : ')
+USER = input('Please Enter username of devices: ')
+SECRET = getpass('Please add secret passowrd for entering enable mode : ')
+
+with open ("device.txt") as routers:
+     for IP in routers:
+          try:
+               R = {'device_type' : 'cisco_ios', 'ip':IP, 'username' : USER, 'password' : PASS , 'enable_secrect': SECRET}
+               R_SSH = ConnectHandler(**R)
+               print(f"Connecting to {IP} .......")
+               R_SSH.is_alive()
+               R_SSH.enable()
+               R_SSH.find_prompt()
+               R_SSH.session_log('log.txt')
+
+               print(f'Getting hostname of {IP}.......')
+               get_hostname = R_SSH.send_command('show run | inc hostname')
+               X = get_hostname.split()
+               hostname = X[1]
+               
+               
+               print(f'Creating frile for router {IP} ........')
+               FILE = hostname + '-Backup.cfg'
+               
+               
+               print(f'Getting running config of {IP} ........')
+
+               get_runconfig = R_SSH.send_command('show running-config')
+               R_SSH.send_command('terminal length 0')
+               print('backing up device {IP}..........')
+               with open(FILE, 'w') as BACKUP:
+                   BACKUP.write(get_runconfig)
+          
+          #Error Handling Exceptions 
+
+          except NetMikoAuthenticationException:
+               print(f'Authentication failed for {IP}. Please check username and password')
+          except NetMikoTimeoutException:
+               print(f'Failed to connect {IP}. Please Connectivity ...... ')
+          except Exception:
+               print(f'An error occured while connnecting to {IP}. Please check device and your connectivity ')
+          finally:
+               R_SSH.disconnect()
+#=======================================
+#LAB-13: LAB Challenge#2
+#=======================================
+from netmiko import ConnectHandler
+from netmiko import NetmikoAuthenticationException,NetmikoTimeoutException
+from getpass import getpass
+import os
+
+R1 = {"device_type":'cisco_ios','username':'admin', 'password' : 'admin', 'ip' : '10.100.10.1'}
+R2 = {"device_type":'cisco_ios','username':'admin', 'password' : 'admin', 'ip' : '10.100.10.2'}
+ASA = {"device_type":'cisco_asa','username':'admin', 'password' : 'admin', 'ip' : '10.100.10.3'}
+
+device = [R1,R2,ASA]
+
+try:
+    def device_config(dev):
+        for dev in device:
+            print(f"Connecting to {dev}.................")
+            my_ssh = ConnectHandler(**dev)
+            my_ssh.enable()
+            my_ssh.session_log('log.txt')
+            print(f"getting hostname of {dev} .......")
+            hostname = my_ssh.send_command('show run | in hostname').split()[1]
+            if "fw" in hostname:
+                my_ssh.send_command("terminal pager 0")
+            else:
+                my_ssh.send_command("terminal length 0")
+
+            print(f"Getting show running-config {dev}......")
+            get_config = my_ssh.send_command('show running-config')
+
+            print(f'backing up {dev} .......')
+            with open(hostname + '-backup.cfg', 'w') as backup:
+                backup.write(get_config)
+            print(f"{dev} backed up successfully :)))))")
+
+    for item in device:
+        device_config(item)
+
+#Error Handling Exceptions 
+
+except NetMikoAuthenticationException:
+    print(f'Authentication failed for {IP}. Please check username and password')
+except NetMikoTimeoutException:
+    print(f'Failed to connect {IP}. Please Connectivity ...... ')
+except Exception:
+    print(f'An error occured while connnecting to {IP}. Please check device and your connectivity ')
+finally:
+    my_ssh.disconnect()         
 
 
 
 
+
+          
+          
 
 
 
