@@ -1,0 +1,21 @@
+run iox-service
+===========
+conf t
+iox
+
+create virtualPortGropup
+=================
+interface VirtualPortGroup0
+ip add 192.168.1.1 255.255.255.0
+no shut
+
+Configure guestshell
+====================
+
+app-hosting appid guestshell
+app-vnic gateway1 virtualportgroup 0 guest-interface 0
+guest-ipaddress 192.168.1.2 netmask 255.255.255.0
+exit
+app-default-gateway 192.168.1.1 guest-interface 0
+name-server0 8.8.8.8 
+
